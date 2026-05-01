@@ -44,7 +44,10 @@ export async function searchVenue(venueName: string): Promise<VenueMetrics[]> {
   );
   url.searchParams.set("per-page", "5");
 
-  const noKey = !process.env.OPENALEX_API_KEY;
+  if (!process.env.OPENALEX_API_KEY) {
+    console.warn("[openAlex] OPENALEX_API_KEY not set; requests may be rate-limited (100 credits/day)");
+  }
+
   const data = await fetchJson<{ results: OpenAlexSource[] }>(
     url.toString(),
     openAlexHeaders()
@@ -59,7 +62,6 @@ export async function searchVenue(venueName: string): Promise<VenueMetrics[]> {
     citedByCount: s.cited_by_count,
     homepageUrl: s.homepage_url,
     type: s.type,
-    _noKeyWarning: noKey,
   }));
 
   return results;

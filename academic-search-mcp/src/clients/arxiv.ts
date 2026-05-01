@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { ApiError } from "../utils/retry.js";
 
-const BASE = "http://export.arxiv.org/api/query";
+const BASE = "https://export.arxiv.org/api/query";
 
 export interface ArxivPaper {
   arxivId: string;
