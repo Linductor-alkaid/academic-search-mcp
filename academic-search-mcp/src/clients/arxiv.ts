@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { ApiError } from "../utils/retry.js";
+import { fetchWithRetry, ApiError } from "../utils/retry.js";
 
 const BASE = "https://export.arxiv.org/api/query";
 
@@ -47,8 +47,9 @@ export async function searchArxiv(params: {
 
   let text: string;
   try {
-    const res = await fetch(url.toString(), { signal: controller.signal });
-    if (!res.ok) throw new ApiError(`arXiv HTTP ${res.status}`, res.status);
+    const res = await fetchWithRetry(() =>
+      fetch(url.toString(), { signal: controller.signal })
+    );
     text = await res.text();
   } catch (err) {
     if ((err as Error).name === "AbortError") {

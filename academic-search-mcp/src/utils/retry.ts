@@ -53,7 +53,7 @@ export async function fetchJson<T>(
   headers: Record<string, string> = {}
 ): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
+  const timeout = setTimeout(() => controller.abort(), 30_000);
 
   try {
     const res = await fetchWithRetry(() =>
@@ -62,7 +62,7 @@ export async function fetchJson<T>(
     return res.json() as Promise<T>;
   } catch (err) {
     if ((err as Error).name === "AbortError") {
-      throw new ApiError("请求超时（10s），请检查网络连接", 0);
+      throw new ApiError("请求超时（30s），请检查网络连接", 0);
     }
     throw err;
   } finally {
