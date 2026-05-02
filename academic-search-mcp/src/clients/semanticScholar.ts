@@ -2,9 +2,30 @@ import { fetchJson, ApiError } from "../utils/retry.js";
 
 const BASE = "https://api.semanticscholar.org/graph/v1";
 
+let s2KeyInvalid = false;
+
 function s2Headers(): Record<string, string> {
   const key = process.env.S2_API_KEY;
-  return key ? { "x-api-key": key } : {};
+  if (!key || s2KeyInvalid) return {};
+  return { "x-api-key": key };
+}
+
+async function fetchS2Json<T>(url: string): Promise<T> {
+  try {
+    return await fetchJson<T>(url, s2Headers());
+  } catch (err) {
+    if (
+      err instanceof ApiError &&
+      (err.statusCode === 401 || err.statusCode === 403) &&
+      !s2KeyInvalid &&
+      process.env.S2_API_KEY
+    ) {
+      s2KeyInvalid = true;
+      console.warn("[semanticScholar] S2_API_KEY 无效，已降级为无认证访问");
+      return fetchJson<T>(url, {});
+    }
+    throw err;
+  }
 }
 
 const PAPER_FIELDS =
@@ -63,16 +84,13 @@ export async function searchPapers(params: {
     url.searchParams.set("year", `${yearStart ?? ""}-${yearEnd ?? ""}`);
   }
 
-  const data = await fetchJson<{ data: S2Paper[]; total: number }>(
-    url.toString(),
-    s2Headers()
-  );
+  const data = await fetchS2Json<{ data: S2Paper[]; total: number }>(url.toString());
   return data.data ?? [];
 }
 
 export async function getPaper(paperId: string): Promise<S2PaperDetail> {
   const url = `${BASE}/paper/${encodeURIComponent(paperId)}?fields=${PAPER_DETAIL_FIELDS}&limit=20`;
-  return fetchJson<S2PaperDetail>(url, s2Headers());
+  return fetchS2Json<S2PaperDetail>(url);
 }
 
 export async function getPaperCitations(
@@ -80,10 +98,7 @@ export async function getPaperCitations(
   limit = 20
 ): Promise<S2Paper[]> {
   const url = `${BASE}/paper/${encodeURIComponent(paperId)}/citations?fields=${PAPER_FIELDS}&limit=${limit}`;
-  const data = await fetchJson<{ data: Array<{ citingPaper: S2Paper }> }>(
-    url,
-    s2Headers()
-  );
+  const data = await fetchS2Json<{ data: Array<{ citingPaper: S2Paper }> }>(url);
   return (data.data ?? [])
     .map((d) => d.citingPaper)
     .sort((a, b) => b.citationCount - a.citationCount);
@@ -92,7 +107,7 @@ export async function getPaperCitations(
 export async function getAuthorById(authorId: string): Promise<S2AuthorDetail> {
   const fields = "name,hIndex,citationCount,paperCount,affiliations,papers.title,papers.year,papers.citationCount,papers.externalIds";
   const url = `${BASE}/author/${encodeURIComponent(authorId)}?fields=${fields}`;
-  return fetchJson<S2AuthorDetail>(url, s2Headers());
+  return fetchS2Json<S2AuthorDetail>(url);
 }
 
 export async function searchAuthor(name: string): Promise<S2AuthorDetail | null> {
@@ -101,6 +116,6 @@ export async function searchAuthor(name: string): Promise<S2AuthorDetail | null>
   url.searchParams.set("fields", "name,hIndex,citationCount,paperCount,affiliations,papers.title,papers.year,papers.citationCount,papers.externalIds");
   url.searchParams.set("limit", "1");
 
-  const data = await fetchJson<{ data: S2AuthorDetail[] }>(url.toString(), s2Headers());
+  const data = await fetchS2Json<{ data: S2AuthorDetail[] }>(url.toString());
   return data.data?.[0] ?? null;
 }
