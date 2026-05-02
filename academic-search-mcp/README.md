@@ -19,7 +19,7 @@
 ## 安装
 
 ```bash
-git clone <repo>
+git clone https://github.com/Linductor-alkaid/academic-search-mcp.git
 cd academic-search-mcp
 npm install
 npm run build
@@ -34,7 +34,7 @@ npm run build
   "mcpServers": {
     "academic-search": {
       "command": "node",
-      "args": ["G:/myproject/papersearcher-mcp/academic-search-mcp/dist/index.js"],
+      "args": ["/path/to/academic-search-mcp/dist/index.js"],
       "env": {
         "OPENALEX_API_KEY": "your_openalex_key_here",
         "S2_API_KEY": "your_s2_key_here"
