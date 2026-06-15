@@ -113,12 +113,15 @@ export async function getAuthorById(authorId: string): Promise<S2AuthorDetail> {
   return fetchS2Json<S2AuthorDetail>(url);
 }
 
-export async function searchAuthor(name: string): Promise<S2AuthorDetail | null> {
+export async function searchAuthor(
+  name: string,
+  limit = 5
+): Promise<S2AuthorDetail[]> {
   const url = new URL(`${BASE}/author/search`);
   url.searchParams.set("query", name);
   url.searchParams.set("fields", "name,hIndex,citationCount,paperCount,affiliations,papers.title,papers.year,papers.citationCount,papers.externalIds");
-  url.searchParams.set("limit", "1");
+  url.searchParams.set("limit", String(limit));
 
   const data = await fetchS2Json<{ data: S2AuthorDetail[] }>(url.toString());
-  return data.data?.[0] ?? null;
+  return data.data ?? [];
 }
