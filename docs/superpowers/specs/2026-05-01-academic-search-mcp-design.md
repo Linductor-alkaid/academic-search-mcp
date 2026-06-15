@@ -272,3 +272,21 @@ npx @modelcontextprotocol/inspector node dist/index.js
 # 环境变量传入方式
 OPENALEX_API_KEY=xxx S2_API_KEY=yyy npx @modelcontextprotocol/inspector node dist/index.js
 ```
+
+---
+
+## 13. Changelog
+
+### v1.1.0（2026-06-15，optimize-v1 refactor）
+
+7 个 commit，针对使用反馈的 7 个改进点：
+
+1. **ID 规范化**（`src/clients/idNormalize.ts`）：`paper_id` 接受裸 arXiv ID / 裸 DOI / `ARXIV:xxx` / `DOI:10.xxx` / 40 位 S2 paperId，无效格式抛 400 含支持清单。
+2. **`get_paper_details` 输出体积**：`formatResponse` 加两层兜底截断（单字段 2K / JSON 总长 50K），并新增 4 个可选参数 `include_references` / `include_citations` / `references_limit` / `citations_limit`。
+3. **OpenAlex 字段语义修正**：`VenueMetrics.impactFactor` → `twoYearMeanCitedness`（实际是 OpenAlex 的 2yr mean citedness 而非 JCR IF）。会议自动标记 ⚠️ 并对该字段返回 N/A。
+4. **作者消歧**：`searchAuthor` 返回 top 5 候选 + `author_id`；handler 列出全部候选 + 检测 name mismatch，给出警告。
+5. **摘要截断可配**：`search_papers` / `search_arxiv_papers` 新增 `abstract_chars`（0-5000，默认 300，0=不截断）。
+6. **README 文档**：新增「论文 ID 格式速查表」「输出体积控制」「作者消歧」「arXiv 分类默认」「OpenAlex 字段说明」「摘要长度自定义」6 节。
+7. **schema describe 增强**：所有 `paper_id` 字段明确列出支持的 ID 格式；`venue_name` 描述补充。
+
+向后兼容：所有新参数 `optional` 或有默认值，旧调用方式不需改动。

@@ -7,7 +7,9 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 export const getJournalMetricsSchema = {
   venue_name: z
     .string()
-    .describe("期刊或会议名称，如 'ICRA', 'Nature Robotics', 'IEEE Transactions on Robotics'"),
+    .describe(
+      "期刊或会议名称（如 'ICRA', 'Nature Robotics', 'IEEE Transactions on Robotics'）。缩写可能匹配多个，会返回 top 5。返回的 '2yr mean citedness' 是 OpenAlex 自有指标，不是 JCR Impact Factor；会议无此字段。"
+    ),
 };
 
 export async function handleGetJournalMetrics(args: {
@@ -25,19 +27,24 @@ export async function handleGetJournalMetrics(args: {
         ? "\n\n> **提示：** 未配置 OPENALEX_API_KEY，每日仅 100 credits。请前往 openalex.org/settings/api 获取免费 key。"
         : "";
 
-    const lines = venues.map((v, i) =>
-      [
+    const lines = venues.map((v, i) => {
+      const isConference = v.type === "conference";
+      const citednessLine = isConference
+        ? `**2yr mean citedness：** N/A（会议无此指标，参考 h-index / 总引用数）`
+        : `**2yr mean citedness：** ${v.twoYearMeanCitedness?.toFixed(3) ?? "无数据"}（非期刊影响因子 IF）`;
+
+      return [
         `### ${i + 1}. ${v.displayName}`,
-        `**类型：** ${v.type ?? "未知"}`,
-        `**影响因子（2yr）：** ${v.impactFactor?.toFixed(3) ?? "无数据"}`,
+        `**类型：** ${v.type ?? "未知"}${isConference ? " ⚠️ 会议" : ""}`,
+        citednessLine,
         `**h-index：** ${v.hIndex ?? "无数据"}`,
         `**收录论文数：** ${v.worksCount.toLocaleString()}`,
         `**总被引次数：** ${v.citedByCount.toLocaleString()}`,
         v.homepageUrl ? `**主页：** ${v.homepageUrl}` : "",
       ]
         .filter(Boolean)
-        .join("\n")
-    );
+        .join("\n");
+    });
 
     const markdown = `## 期刊/会议指标：${args.venue_name}\n\n${lines.join("\n\n---\n\n")}${noKeyWarning}`;
     return formatResponse(markdown, venues);

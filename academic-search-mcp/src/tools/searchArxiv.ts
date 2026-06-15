@@ -9,13 +9,22 @@ export const searchArxivSchema = {
   categories: z
     .array(z.string())
     .default(["cs.RO"])
-    .describe("arXiv 分类列表，如 ['cs.RO', 'cs.LG', 'eess.SY']"),
+    .describe(
+      "arXiv 分类列表，默认 ['cs.RO']。跨分类示例: ['cs.RO', 'cs.LG', 'eess.SY']"
+    ),
   max_results: z.number().int().min(1).max(100).default(20).describe("最大返回数量"),
   date_from: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .describe("起始日期，格式 YYYY-MM-DD"),
+  abstract_chars: z
+    .number()
+    .int()
+    .min(0)
+    .max(5000)
+    .default(300)
+    .describe("每条论文摘要最大字符数（0 表示不截断，默认 300）"),
 };
 
 export async function handleSearchArxiv(args: {
@@ -23,6 +32,7 @@ export async function handleSearchArxiv(args: {
   categories: string[];
   max_results: number;
   date_from?: string;
+  abstract_chars: number;
 }): Promise<CallToolResult> {
   try {
     const papers = await searchArxiv({
@@ -36,16 +46,21 @@ export async function handleSearchArxiv(args: {
       return formatError("未找到相关 arXiv 论文，请尝试调整关键词或分类");
     }
 
-    const lines = papers.map((p, i) =>
-      [
+    const lines = papers.map((p, i) => {
+      const absSlice =
+        args.abstract_chars > 0
+          ? p.abstract.slice(0, args.abstract_chars) +
+            (p.abstract.length > args.abstract_chars ? "..." : "")
+          : p.abstract;
+      return [
         `### ${i + 1}. ${p.title}`,
         `**作者：** ${p.authors.join(", ")}`,
         `**发布日期：** ${p.publishedDate} | **分类：** ${p.categories.join(", ")}`,
         `**arXiv ID：** ${p.arxivId}`,
         `**PDF：** ${p.pdfUrl}`,
-        `**摘要：** ${p.abstract.slice(0, 300)}${p.abstract.length > 300 ? "..." : ""}`,
-      ].join("\n")
-    );
+        `**摘要：** ${absSlice}`,
+      ].join("\n");
+    });
 
     const markdown = `## arXiv 搜索结果：${args.query}\n\n分类：${args.categories.join(", ")} | 共 ${papers.length} 篇\n\n${lines.join("\n\n---\n\n")}`;
     return formatResponse(markdown, { total: papers.length, papers });

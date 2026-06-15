@@ -7,7 +7,9 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 export const getCitationsSchema = {
   paper_id: z
     .string()
-    .describe("论文 ID：Semantic Scholar ID、DOI:10.xxx 或 ARXIV:2301.xxxxx"),
+    .describe(
+      "被引论文 ID。支持：裸 arXiv ID（如 2402.18294）、裸 DOI（如 10.1109/...）、ARXIV:xxx、DOI:10.xxx、或 40 位 S2 paperId。自动归一化。"
+    ),
   limit: z.number().int().min(1).max(100).default(20).describe("返回数量（1-100）"),
 };
 

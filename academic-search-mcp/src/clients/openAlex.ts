@@ -14,7 +14,11 @@ function openAlexHeaders(): Record<string, string> {
 export interface VenueMetrics {
   id: string;
   displayName: string;
-  impactFactor: number | null;
+  /**
+   * OpenAlex `summary_stats.2yr_mean_citedness`. NOT a journal Impact Factor.
+   * Conferences do not have this metric — will be null for venue type='conference'.
+   */
+  twoYearMeanCitedness: number | null;
   hIndex: number | null;
   worksCount: number;
   citedByCount: number;
@@ -56,7 +60,7 @@ export async function searchVenue(venueName: string): Promise<VenueMetrics[]> {
   const results = (data.results ?? []).map((s) => ({
     id: s.id,
     displayName: s.display_name,
-    impactFactor: s.summary_stats?.["2yr_mean_citedness"] ?? null,
+    twoYearMeanCitedness: s.summary_stats?.["2yr_mean_citedness"] ?? null,
     hIndex: s.summary_stats?.h_index ?? null,
     worksCount: s.works_count,
     citedByCount: s.cited_by_count,

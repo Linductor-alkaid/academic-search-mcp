@@ -138,6 +138,71 @@ npm run build
 **搜索最新 arXiv 预印本：**
 > 搜索 2024 年以来 cs.RO 和 cs.LG 分类下关于 "diffusion policy" 的论文
 
+## 论文 ID 格式速查表
+
+所有接受 `paper_id` 的工具（`get_paper_details` / `get_citations`）支持以下 5 种格式，**自动归一化**到 Semantic Scholar 接受的内部表示：
+
+| 你传的 | 自动归一化为 | 备注 |
+|--------|-------------|------|
+| `2402.18294` | `ARXIV:2402.18294` | 裸 arXiv ID（YYMM.NNNNN） |
+| `ARXIV:2402.18294` | `ARXIV:2402.18294` | 大小写不敏感 |
+| `10.1109/IROS.2024.10801451` | `DOI:10.1109/...` | 裸 DOI |
+| `DOI:10.1109/...` | `DOI:10.1109/...` | |
+| 40 位 hex（如 `9e1c2411c873a95843c4ce670fb53569c65059d6`） | 原样 | S2 paperId |
+
+无法识别的格式会返回 400 错误并附「支持的格式」清单。
+
+## 论文详情输出体积控制
+
+`get_paper_details` 默认会包含参考文献 + 被引论文各 10 条（约 30-60KB），适合大多数场景。遇到输出过大时：
+
+| 参数 | 类型 | 默认 | 作用 |
+|------|------|------|------|
+| `include_references` | bool | `true` | 是否包含参考文献列表 |
+| `include_citations` | bool | `true` | 是否包含被引论文列表 |
+| `references_limit` | 0-100 | `10` | 参考文献条数 |
+| `citations_limit` | 0-100 | `10` | 被引论文条数 |
+
+最小化调用示例（只看摘要和元数据）：
+```
+get_paper_details(paper_id="2402.18294", include_references=false, include_citations=false)
+```
+
+另外 `formatResponse` 还有两层兜底截断（单字符串字段 2000 chars / JSON 总长 50000 chars），超出部分会自动截断并附提示，不会撑爆客户端上下文。
+
+## 作者消歧
+
+`get_author_info(author_name=...)` 现在返回 **top 5 候选作者**，每个都带 `author_id`、机构、h-index、引用数。中文/拼音重名场景下尤其有用：
+
+- 主信息仍是首位候选（保持原有行为）
+- 末尾追加「搜索候选」列表 + ⚠️ 提示
+- 用 `author_id="..."` 重试可精确指定作者
+
+## arXiv 分类默认
+
+`search_arxiv_papers` 默认 `categories=["cs.RO"]`（**仅机器人学方向**）。跨分类搜索需显式传：
+
+```
+search_arxiv_papers(query="...", categories=["cs.RO", "cs.LG", "eess.SY"])
+```
+
+## OpenAlex 字段说明
+
+⚠️ `get_journal_metrics` 返回的「2yr mean citedness」**不是** JCR Impact Factor，而是 OpenAlex 自有指标。
+
+- **会议（type=conference）**：无此字段，会标记 N/A，请参考 h-index 和总引用数
+- **期刊（type=journal）**：可参考，但与 JCR IF 数值不同（口径差异）
+
+## 摘要长度自定义
+
+`search_papers` 和 `search_arxiv_papers` 默认摘要截断 300 字符，方法描述容易被截断。设大一点：
+
+```
+search_papers(query="...", abstract_chars=2000)
+```
+
+`abstract_chars=0` 表示不截断。
+
 ## 限速说明
 
 - **Semantic Scholar（无 key）**：100 req/5min，遇到 429 自动指数退避重试（1s→2s→4s）
