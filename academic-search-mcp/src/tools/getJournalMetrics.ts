@@ -7,7 +7,9 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 export const getJournalMetricsSchema = {
   venue_name: z
     .string()
-    .describe("期刊或会议名称，如 'ICRA', 'Nature Robotics', 'IEEE Transactions on Robotics'"),
+    .describe(
+      "期刊或会议名称（如 'ICRA', 'Nature Robotics', 'IEEE Transactions on Robotics'）。缩写可能匹配多个，会返回 top 5。返回的 '2yr mean citedness' 是 OpenAlex 自有指标，不是 JCR Impact Factor；会议无此字段。"
+    ),
 };
 
 export async function handleGetJournalMetrics(args: {

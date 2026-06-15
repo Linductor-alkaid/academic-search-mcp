@@ -5,8 +5,18 @@ import { ApiError } from "../utils/retry.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 export const getAuthorInfoSchema = {
-  author_name: z.string().optional().describe("作者姓名（与 author_id 二选一）"),
-  author_id: z.string().optional().describe("Semantic Scholar 作者 ID（与 author_name 二选一）"),
+  author_name: z
+    .string()
+    .optional()
+    .describe(
+      "作者姓名（与 author_id 二选一）。中文/拼音同名多，建议先粗搜拿到 author_id 后精确指定。"
+    ),
+  author_id: z
+    .string()
+    .optional()
+    .describe(
+      "Semantic Scholar 作者 ID（与 author_name 二选一）。精确指定，无歧义。"
+    ),
 };
 
 export async function handleGetAuthorInfo(args: {
