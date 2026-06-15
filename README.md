@@ -203,6 +203,69 @@ search_papers(query="...", abstract_chars=2000)
 
 `abstract_chars=0` 表示不截断。
 
+## v1.0.0 → v1.1.0 迁移指南
+
+v1.1.0 包含 **1 处破坏性变更** 和 **1 处行为默认值变更**。其他都是新增可选参数（向后兼容）。本文档面向直接解析 `get_journal_metrics` JSON dump 的下游用户。
+
+### 破坏性变更：`VenueMetrics.impactFactor` 重命名
+
+OpenAlex 的 `summary_stats['2yr_mean_citedness']` **不是** JCR Impact Factor。旧名 `impactFactor` 误导性极强（ICRA 返回 0.000 像 bug，实际是该字段对会议本就无意义）。
+
+```diff
+// 旧 (v1.0.0)
+const venue = parseJsonDump(getJournalMetrics("ICRA"));
+console.log(venue[0].impactFactor);  // → undefined（字段没了）
+
+// 新 (v1.1.0)
+const venue = parseJsonDump(getJournalMetrics("ICRA"));
+console.log(venue[0].twoYearMeanCitedness);  // → null（会议无此字段）或数值（期刊）
+```
+
+**迁移动作**：
+- 如果你的代码访问 `v.impactFactor`，改为 `v.twoYearMeanCitedness`
+- 如果依赖 `impactFactor !== null` 判断「这是期刊」，改为 `v.type !== "conference"`
+- 会议（type=conference）现在永远返回 `twoYearMeanCitedness: null`，markdown 块会显示 `N/A（会议无此指标，参考 h-index / 总引用数）`
+
+### 行为变更：`get_paper_details` 默认条数 20 → 10
+
+旧版本 references 和 citations 各固定 20 条（合计可能 ~134K chars）。v1.1.0 默认改为 10/10（约 30-60K），更安全。
+
+```diff
+// 旧 (v1.0.0)
+get_paper_details(paper_id="ARXIV:2402.18294")
+  → 返回 references × 20, citations × 20
+
+// 新 (v1.1.0) — 默认行为变了
+get_paper_details(paper_id="ARXIV:2402.18294")
+  → 返回 references × 10, citations × 10
+```
+
+**迁移动作**（如果你需要完整列表）：
+- 想要旧行为：`get_paper_details(paper_id="...", references_limit=20, citations_limit=20)`
+- 想要极致精简（只看摘要）：`get_paper_details(paper_id="...", include_references=false, include_citations=false)`
+
+### 新增可选参数（无破坏，向后兼容）
+
+| 工具 | 新参数 | 旧调用者需要改吗 |
+|------|--------|----------------|
+| `get_paper_details` | `include_references`, `include_citations`, `references_limit`, `citations_limit` | ❌ 不需要 |
+| `get_citations` / `get_paper_details` | `paper_id` 现在接受裸 arXiv ID / 裸 DOI | ❌ 不需要（旧格式仍工作） |
+| `search_papers` / `search_arxiv_papers` | `abstract_chars` | ❌ 不需要 |
+| `get_author_info` | name search 现在返回 top-5 候选列表 | ❌ 不需要（首位仍是主信息） |
+
+### 升级建议
+
+```bash
+cd academic-search-mcp
+git pull origin master
+npm install   # 无新依赖，但保险起见
+npm run build
+```
+
+Claude Desktop 配置无需修改（无新增 env vars，无 schema 不兼容）。重启 Claude Desktop 让新版本生效。
+
+---
+
 ## 限速说明
 
 - **Semantic Scholar（无 key）**：100 req/5min，遇到 429 自动指数退避重试（1s→2s→4s）
