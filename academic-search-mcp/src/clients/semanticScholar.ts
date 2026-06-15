@@ -1,4 +1,5 @@
 import { fetchJson, ApiError } from "../utils/retry.js";
+import { normalizePaperId } from "./idNormalize.js";
 
 const BASE = "https://api.semanticscholar.org/graph/v1";
 
@@ -89,7 +90,8 @@ export async function searchPapers(params: {
 }
 
 export async function getPaper(paperId: string): Promise<S2PaperDetail> {
-  const url = `${BASE}/paper/${encodeURIComponent(paperId)}?fields=${PAPER_DETAIL_FIELDS}&limit=20`;
+  const normalized = normalizePaperId(paperId);
+  const url = `${BASE}/paper/${encodeURIComponent(normalized)}?fields=${PAPER_DETAIL_FIELDS}&limit=20`;
   return fetchS2Json<S2PaperDetail>(url);
 }
 
@@ -97,7 +99,8 @@ export async function getPaperCitations(
   paperId: string,
   limit = 20
 ): Promise<S2Paper[]> {
-  const url = `${BASE}/paper/${encodeURIComponent(paperId)}/citations?fields=${PAPER_FIELDS}&limit=${limit}`;
+  const normalized = normalizePaperId(paperId);
+  const url = `${BASE}/paper/${encodeURIComponent(normalized)}/citations?fields=${PAPER_FIELDS}&limit=${limit}`;
   const data = await fetchS2Json<{ data: Array<{ citingPaper: S2Paper }> }>(url);
   return (data.data ?? [])
     .map((d) => d.citingPaper)
